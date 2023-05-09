@@ -13,7 +13,6 @@ const app = express();
 
 const Joi = require("joi");
 
-
 const expireTime = 1 * 60 * 60 * 1000; //expires after 1 hour  (hours * minutes * seconds * millis)
 
 /* secret information section */
@@ -61,7 +60,7 @@ function sessionValidation(req,res,next) {
         next();
     }
     else {
-        res.redirect('/login');
+        res.redirect('/login', {navLinks: navLinks});
     }
 }
 
@@ -75,7 +74,7 @@ function isAdmin(req) {
 function adminAuthorization(req, res, next) {
     if (!isAdmin(req)) {
         res.status(403);
-        res.render("errorMessage", {error: "Not Authorized"});
+        res.render("errorMessage", {error: "Not Authorized", navLinks: navLinks});
         return;
     }
     else {
@@ -83,21 +82,27 @@ function adminAuthorization(req, res, next) {
     }
 }
 
+const navLinks = [
+    { name: "Home", link: "/" },
+    { name: "Members", link: "/members" },
+    { name: "Login", link: "/login" },
+    { name: "Admin", link: "/admin" }
+];
 
 app.get('/', (req, res) => {
     if (req.session.authenticated) {
-        res.render('authenticated', { username: req.session.username });
+        res.render('authenticated', { username: req.session.username, navLinks: navLinks });
     } else {
-        res.render('unauthenticated')
+        res.render('unauthenticated', {navLinks: navLinks})
     }
 });
 
 app.get('/createUser', (req, res) => {
-    res.render('createUser');
+    res.render('createUser', {navLinks: navLinks});
 });
 
 app.get('/login', (req, res) => {
-    res.render('login');
+    res.render('login', {navLinks: navLinks});
 });
 
 app.post('/submitUser', async (req, res) => {
@@ -116,11 +121,11 @@ app.post('/submitUser', async (req, res) => {
         const errorMessage = validationResult.error.details[0].message;
 
         if (errorMessage.includes("username")) {
-            res.render('nameRequired');
+            res.render('nameRequired', {navLinks: navLinks});
         } else if (errorMessage.includes("email")) {
-            res.render('emailRequired');
+            res.render('emailRequired', {navLinks: navLinks});
         } else if (errorMessage.includes("password")) {
-            res.render('passwordRequired');
+            res.render('passwordRequired', {navLinks: navLinks});
         }
         return;
     }
@@ -143,7 +148,6 @@ app.post('/submitUser', async (req, res) => {
     res.redirect('/members');
 });
 
-
 app.post('/loggingin', async (req, res) => {
     var email = req.body.email;
     var password = req.body.password;
@@ -160,7 +164,7 @@ app.post('/loggingin', async (req, res) => {
 
     console.log(result);
     if (result.length != 1) {
-        res.render('userNotFound');
+        res.render('userNotFound', {navLinks: navLinks});
         return;
     }
     if (await bcrypt.compare(password, result[0].password)) {
@@ -174,26 +178,20 @@ app.post('/loggingin', async (req, res) => {
         return;
     }
     else {
-        res.render('userNotFound');
+        res.render('userNotFound', {navLinks: navLinks});
         return;
     }
 });
-
-
 
 app.get('/members', (req, res) => {
     if (!req.session.authenticated) {
         res.redirect('/');
     } else {
         res.render('members', {
-            username: req.session.username
+            username: req.session.username, navLinks: navLinks
         });
     }
 });
-
-
-
-
 
 app.get('/logout', (req, res) => {
     req.session.destroy();
@@ -203,7 +201,7 @@ app.get('/logout', (req, res) => {
 app.get('/admin', sessionValidation, adminAuthorization, async (req,res) => {
     const result = await userCollection.find().project({username: 1, user_type: 1, _id: 1}).toArray();
  
-    res.render("admin", {users: result});
+    res.render("admin", {users: result, navLinks: navLinks});
 });
 
 app.post('/promote_user', sessionValidation, adminAuthorization, async (req,res) => {
@@ -224,16 +222,11 @@ app.post('/demote_user', sessionValidation, adminAuthorization, async (req,res) 
     res.redirect('/admin');
 });
  
-  
-
- 
-
-
 app.use(express.static(__dirname + "/public"));
 
 app.get("*", (req, res) => {
     res.status(404);
-    res.render("404");
+    res.render("404", {navLinks: navLinks});
 })
 
 app.listen(port, () => {
