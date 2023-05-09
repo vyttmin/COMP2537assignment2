@@ -6,6 +6,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const bcrypt = require('bcrypt');
 const saltRounds = 12;
+const url = require('url');
 
 const port = process.env.PORT || 3000;
 
@@ -60,7 +61,7 @@ function sessionValidation(req,res,next) {
         next();
     }
     else {
-        res.redirect('/login', {navLinks: navLinks});
+        res.redirect('/login', {navLinks: navLinks, currentURL: url.parse(req.url).pathname});
     }
 }
 
@@ -74,7 +75,7 @@ function isAdmin(req) {
 function adminAuthorization(req, res, next) {
     if (!isAdmin(req)) {
         res.status(403);
-        res.render("errorMessage", {error: "Not Authorized", navLinks: navLinks});
+        res.render("errorMessage", {error: "Not Authorized", navLinks: navLinks, currentURL: url.parse(req.url).pathname});
         return;
     }
     else {
@@ -89,20 +90,26 @@ const navLinks = [
     { name: "Admin", link: "/admin" }
 ];
 
+app.use("/", (req, res, next) => {
+    app.locals.navLinks = navLinks;
+    app.locals.currentURL = url.parse(req.url).pathname;
+    next();
+});
+
 app.get('/', (req, res) => {
     if (req.session.authenticated) {
-        res.render('authenticated', { username: req.session.username, navLinks: navLinks });
+        res.render('authenticated', { username: req.session.username});
     } else {
-        res.render('unauthenticated', {navLinks: navLinks})
+        res.render('unauthenticated')
     }
 });
 
 app.get('/createUser', (req, res) => {
-    res.render('createUser', {navLinks: navLinks});
+    res.render('createUser');
 });
 
 app.get('/login', (req, res) => {
-    res.render('login', {navLinks: navLinks});
+    res.render('login');
 });
 
 app.post('/submitUser', async (req, res) => {
@@ -121,11 +128,11 @@ app.post('/submitUser', async (req, res) => {
         const errorMessage = validationResult.error.details[0].message;
 
         if (errorMessage.includes("username")) {
-            res.render('nameRequired', {navLinks: navLinks});
+            res.render('nameRequired');
         } else if (errorMessage.includes("email")) {
-            res.render('emailRequired', {navLinks: navLinks});
+            res.render('emailRequired');
         } else if (errorMessage.includes("password")) {
-            res.render('passwordRequired', {navLinks: navLinks});
+            res.render('passwordRequired');
         }
         return;
     }
@@ -164,7 +171,7 @@ app.post('/loggingin', async (req, res) => {
 
     console.log(result);
     if (result.length != 1) {
-        res.render('userNotFound', {navLinks: navLinks});
+        res.render('userNotFound');
         return;
     }
     if (await bcrypt.compare(password, result[0].password)) {
@@ -178,7 +185,7 @@ app.post('/loggingin', async (req, res) => {
         return;
     }
     else {
-        res.render('userNotFound', {navLinks: navLinks});
+        res.render('userNotFound');
         return;
     }
 });
@@ -187,9 +194,7 @@ app.get('/members', (req, res) => {
     if (!req.session.authenticated) {
         res.redirect('/');
     } else {
-        res.render('members', {
-            username: req.session.username, navLinks: navLinks
-        });
+        res.render('members', {username: req.session.username});
     }
 });
 
@@ -201,7 +206,7 @@ app.get('/logout', (req, res) => {
 app.get('/admin', sessionValidation, adminAuthorization, async (req,res) => {
     const result = await userCollection.find().project({username: 1, user_type: 1, _id: 1}).toArray();
  
-    res.render("admin", {users: result, navLinks: navLinks});
+    res.render("admin", {users: result});
 });
 
 app.post('/promote_user', sessionValidation, adminAuthorization, async (req,res) => {
@@ -226,8 +231,8 @@ app.use(express.static(__dirname + "/public"));
 
 app.get("*", (req, res) => {
     res.status(404);
-    res.render("404", {navLinks: navLinks});
-})
+    res.render("404");
+});
 
 app.listen(port, () => {
     console.log("Node application listening on port " + port);
