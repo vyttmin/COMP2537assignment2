@@ -61,7 +61,7 @@ function sessionValidation(req,res,next) {
         next();
     }
     else {
-        res.redirect('/login', {navLinks: navLinks, currentURL: url.parse(req.url).pathname});
+        res.redirect('/login');
     }
 }
 
@@ -75,7 +75,7 @@ function isAdmin(req) {
 function adminAuthorization(req, res, next) {
     if (!isAdmin(req)) {
         res.status(403);
-        res.render("errorMessage", {error: "Not Authorized", navLinks: navLinks, currentURL: url.parse(req.url).pathname});
+        res.render("errorMessage", {error: "Not Authorized"});
         return;
     }
     else {
