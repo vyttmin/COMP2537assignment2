@@ -1,0 +1,26 @@
+<%- include("templates/header") %>
+    <div>Users:</div>
+    <ul>
+        <% let i=0; %>
+            <% for(i=0; i < users.length; i++) { %>
+                <% let user=users[i]; %>
+                    <p><%- include('templates/user', {user: users[i]}) %> </p>
+                    <li style="list-style-type: none">
+                        <form method="POST" action="/promote_user">
+                            <input type="hidden" name="user_id" value="<%= user._id %>">
+                            <input class="btn btn-success rounded-pill px-3" type="submit" value="Promote to Admin">
+                        </form>
+                        <form method="POST" action="/demote_user">
+                            <input type="hidden" name="user_id" value="<%= user._id %>">
+                            <input class="btn btn-secondary rounded-pill" type="submit" value="   Demote to User   ">
+                        </form>
+                    </li>
+                    <% } %>
+
+    </ul>
+
+
+    <%- include("templates/footer") %>
+
+
+    <button class="btn btn-primary rounded-pill px-3" type="button">Primary</button>
